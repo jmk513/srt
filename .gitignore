@@ -43,3 +43,6 @@ vcpkg/
 
 # LSP
 compile_commands.json
+
+build
+build/

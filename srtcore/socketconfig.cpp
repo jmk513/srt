@@ -382,6 +382,14 @@ struct CSrtConfigSetter<SRTO_TLPKTDROP>
     }
 };
 template<>
+struct CSrtConfigSetter<SRTO_NOWAITDROP>
+{
+    static void set(CSrtConfig& co, const void* optval, int optlen)
+    {
+        co.bNoWaitDrop = cast_optval<bool>(optval, optlen);
+    }
+};
+template<>
 struct CSrtConfigSetter<SRTO_SNDDROPDELAY>
 {
     static void set(CSrtConfig& co, const void* optval, int optlen)
@@ -937,6 +945,7 @@ int dispatchSet(SRT_SOCKOPT optName, CSrtConfig& co, const void* optval, int opt
         DISPATCH(SRTO_RCVLATENCY);
         DISPATCH(SRTO_PEERLATENCY);
         DISPATCH(SRTO_TLPKTDROP);
+        DISPATCH(SRTO_NOWAITDROP);
         DISPATCH(SRTO_SNDDROPDELAY);
         DISPATCH(SRTO_PASSPHRASE);
         DISPATCH(SRTO_PBKEYLEN);

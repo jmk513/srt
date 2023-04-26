@@ -176,6 +176,7 @@ struct SrtOptionAction
         flags[SRTO_IPTTL]              = SRTO_R_PREBIND;
         flags[SRTO_IPTOS]              = SRTO_R_PREBIND;
         flags[SRTO_TLPKTDROP]          = SRTO_R_PRE;
+        flags[SRTO_NOWAITDROP]          = SRTO_R_PRE;
         flags[SRTO_SNDDROPDELAY]       = SRTO_POST_SPEC;
         flags[SRTO_NAKREPORT]          = SRTO_R_PRE;
         flags[SRTO_VERSION]            = SRTO_R_PRE;
@@ -314,6 +315,7 @@ srt::CUDT::CUDT(CUDTSocket* parent): m_parent(parent)
     m_HSGroupType           = SRT_GTYPE_UNDEFINED;
 #endif
     m_bTLPktDrop            = true; // Too-late Packet Drop
+    m_bNoWaitDrop           = false;
 
     m_pCache = NULL;
     // This is in order to set it ANY kind of initial value, however
@@ -356,6 +358,7 @@ srt::CUDT::CUDT(CUDTSocket* parent, const CUDT& ancestor): m_parent(parent)
 
     m_SrtHsSide         = ancestor.m_SrtHsSide; // actually it sets it to HSD_RESPONDER
     m_bTLPktDrop        = ancestor.m_bTLPktDrop;
+    m_bNoWaitDrop       = ancestor.m_bNoWaitDrop;
     m_iReorderTolerance = m_config.iMaxReorderTolerance;  // Initialize with maximum value
 
     // Runtime
@@ -656,6 +659,15 @@ void srt::CUDT::getOpt(SRT_SOCKOPT optName, void *optval, int &optlen)
 
         optlen          = sizeof(bool);
         break;
+    
+    case SRTO_NOWAITDROP:
+        if (m_bConnected)
+            *(bool *)optval = m_bNoWaitDrop;
+        else
+            *(bool *)optval = m_config.bNoWaitDrop;
+
+        optlen          = sizeof(bool);
+        break;
 
     case SRTO_SNDDROPDELAY:
         *(int32_t *)optval = m_config.iSndDropDelay;
@@ -906,6 +918,7 @@ void srt::CUDT::clearData()
     m_bGroupTsbPd    = false;
     m_iTsbPdDelay_ms = m_config.iRcvLatency;
     m_bTLPktDrop     = m_config.bTLPktDrop;
+    m_bNoWaitDrop    = m_config.bNoWaitDrop;
     m_bPeerTLPktDrop = false;
 
     m_bPeerNakReport = false;
@@ -5282,7 +5295,7 @@ void * srt::CUDT::tsbpd(void* param)
         self->m_pRcvBuffer->updRcvAvgDataSize(tnow);
         const srt::CRcvBuffer::PacketInfo info = self->m_pRcvBuffer->getFirstValidPacketInfo();
 
-        const bool is_time_to_deliver = !is_zero(info.tsbpd_time) && (tnow >= info.tsbpd_time);
+        const bool is_time_to_deliver = (!is_zero(info.tsbpd_time) && (tnow >= info.tsbpd_time)) || self->m_bNoWaitDrop;
         tsNextDelivery = info.tsbpd_time;
 
         if (!self->m_bTLPktDrop)
@@ -10048,7 +10061,7 @@ int srt::CUDT::processData(CUnit* in_unit)
                       log << CONID()
                           << "CONTIGUITY CHECK: sequence distance: " << CSeqNo::seqoff(m_iRcvCurrSeqNo, rpkt.m_iSeqNo));
 
-                if (CSeqNo::seqcmp(rpkt.m_iSeqNo, CSeqNo::incseq(m_iRcvCurrSeqNo)) > 0) // Loss detection.
+                if (!m_bNoWaitDrop && CSeqNo::seqcmp(rpkt.m_iSeqNo, CSeqNo::incseq(m_iRcvCurrSeqNo)) > 0) // Loss detection.
                 {
                     int32_t seqlo = CSeqNo::incseq(m_iRcvCurrSeqNo);
                     int32_t seqhi = CSeqNo::decseq(rpkt.m_iSeqNo);
