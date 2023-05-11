@@ -205,7 +205,7 @@ public:
 
     /// Zero time to include all available packets.
     /// TODO: Rename to 'canRead`.
-    bool isRcvDataReady(time_point time_now = time_point()) const;
+    bool isRcvDataReady(time_point time_now = time_point(), bool wait = false) const;
 
     int  getRcvAvgDataSize(int& bytes, int& timespan);
     void updRcvAvgDataSize(const time_point& now);

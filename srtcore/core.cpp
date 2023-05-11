@@ -6729,8 +6729,7 @@ int srt::CUDT::receiveMessage(char* data, int len, SRT_MSGCTRL& w_mctrl, int by_
 {
     // Recvmsg isn't restricted to the congctl type, it's the most
     // basic method of passing the data. You can retrieve data as
-    // they come in, however you need to match the size of the buffer.
-
+    // they come in, however you need to match the size of the buffer
     // Note: if by_exception = ERH_RETURN, this would still break it
     // by exception. The intention of by_exception isn't to prevent
     // exceptions here, but to intercept the erroneous situation should
@@ -6761,7 +6760,7 @@ int srt::CUDT::receiveMessage(char* data, int len, SRT_MSGCTRL& w_mctrl, int by_
     {
         HLOGC(arlog.Debug, log << CONID() << "receiveMessage: CONNECTION BROKEN - reading from recv buffer just for formality");
         enterCS(m_RcvBufferLock);
-        const int res = (m_pRcvBuffer->isRcvDataReady(steady_clock::now()))
+        const int res = (m_pRcvBuffer->isRcvDataReady(steady_clock::now(), m_bNoWaitDrop))
             ? m_pRcvBuffer->readMessage(data, len, &w_mctrl)
             : 0;
         leaveCS(m_RcvBufferLock);
@@ -6801,7 +6800,7 @@ int srt::CUDT::receiveMessage(char* data, int len, SRT_MSGCTRL& w_mctrl, int by_
     {
         HLOGC(arlog.Debug, log << CONID() << "receiveMessage: BEGIN ASYNC MODE. Going to extract payload size=" << len);
         enterCS(m_RcvBufferLock);
-        const int res = (m_pRcvBuffer->isRcvDataReady(steady_clock::now()))
+        const int res = (m_pRcvBuffer->isRcvDataReady(steady_clock::now(), m_bNoWaitDrop))
             ? m_pRcvBuffer->readMessage(data, len, &w_mctrl)
             : 0;
         leaveCS(m_RcvBufferLock);
@@ -6865,7 +6864,7 @@ int srt::CUDT::receiveMessage(char* data, int len, SRT_MSGCTRL& w_mctrl, int by_
 
     do
     {
-        if (stillConnected() && !timeout && !m_pRcvBuffer->isRcvDataReady(steady_clock::now()))
+        if (stillConnected() && !timeout && !m_pRcvBuffer->isRcvDataReady(steady_clock::now(),  m_bNoWaitDrop))
         {
             /* Kick TsbPd thread to schedule next wakeup (if running) */
             if (m_bTsbPd)

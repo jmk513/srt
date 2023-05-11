@@ -660,7 +660,7 @@ size_t CRcvBuffer::countReadable() const
     return m_szSize + m_iFirstNonreadPos - m_iStartPos;
 }
 
-bool CRcvBuffer::isRcvDataReady(time_point time_now) const
+bool CRcvBuffer::isRcvDataReady(time_point time_now, bool wait) const
 {
     const bool haveInorderPackets = hasReadableInorderPkts();
     if (!m_tsbpd.isEnabled())
@@ -677,7 +677,7 @@ bool CRcvBuffer::isRcvDataReady(time_point time_now) const
 
     const PacketInfo info = getFirstValidPacketInfo();
 
-    return info.tsbpd_time <= time_now;
+    return (info.tsbpd_time <= time_now) || wait;
 }
 
 CRcvBuffer::PacketInfo CRcvBuffer::getFirstReadablePacketInfo(time_point time_now) const
